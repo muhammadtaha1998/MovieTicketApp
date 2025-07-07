@@ -1,110 +1,142 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "expo-router";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { colors, radii, spacing, typography } from "../../constants/theme";
+import { searchMovies } from "../../utils/api";
+import { PLACEHOLDER_IMAGE } from "../../utils/storage";
+import { Movie } from "../../utils/types";
 
-import { Collapsible } from '@/components/Collapsible';
-import { ExternalLink } from '@/components/ExternalLink';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+const { width } = Dimensions.get("window");
 
-export default function TabTwoScreen() {
+export default function MovieSearchScreen() {
+  const [query, setQuery] = useState("");
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ["search-movies", query],
+    queryFn: () => searchMovies(query),
+    enabled: !!query,
+  });
+
+  const handleSubmit = () => {
+    refetch();
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+        padding: spacing.md,
+      }}
+    >
+      <Text style={styles.header}>Search</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Search movies..."
+        placeholderTextColor={colors.placeholder}
+        value={query}
+        onChangeText={setQuery}
+        onSubmitEditing={handleSubmit}
+        returnKeyType="search"
+      />
+      {isLoading || isFetching ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" />
+        </View>
+      ) : isError ? (
+        <View style={styles.center}>
+          <Text>Failed to search movies.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={data?.results}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => <MovieCard movie={item} />}
+          contentContainerStyle={{ paddingTop: 16 }}
+          ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Explore</ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image source={require('@/assets/images/react-logo.png')} style={{ alignSelf: 'center' }} />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Custom fonts">
-        <ThemedText>
-          Open <ThemedText type="defaultSemiBold">app/_layout.tsx</ThemedText> to see how to load{' '}
-          <ThemedText style={{ fontFamily: 'SpaceMono' }}>
-            custom fonts such as this one.
-          </ThemedText>
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/versions/latest/sdk/font">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful <ThemedText type="defaultSemiBold">react-native-reanimated</ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+      )}
+    </View>
+  );
+}
+
+function MovieCard({ movie }: { movie: Movie }) {
+  return (
+    <Link
+      href={{ pathname: "/movie/id", params: { id: movie.id.toString() } }}
+      asChild
+    >
+      <TouchableOpacity style={styles.card}>
+        <Image
+          source={
+            movie.poster_path
+              ? { uri: `https://image.tmdb.org/t/p/w500${movie.poster_path}` }
+              : PLACEHOLDER_IMAGE
+          }
+          style={styles.poster}
+          resizeMode="cover"
+        />
+        <Text style={styles.title} numberOfLines={2}>
+          {movie.title}
+        </Text>
+        <Text style={styles.date}>{movie.release_date}</Text>
+      </TouchableOpacity>
+    </Link>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  header: {
+    color: colors.text,
+    fontFamily: typography.fontFamily,
+    fontSize: 28,
+    fontWeight: 700,
+    marginBottom: spacing.md,
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  input: {
+    backgroundColor: colors.input,
+    color: colors.text,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    fontSize: typography.fontSizeBody,
+    fontFamily: typography.fontFamily,
+    marginBottom: spacing.md,
+  },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#222",
+    borderRadius: 12,
+    overflow: "hidden",
+    padding: 8,
+  },
+  poster: {
+    width: 80,
+    height: 120,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: "#444",
+  },
+  title: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+    marginBottom: 4,
+    flex: 1,
+  },
+  date: {
+    color: "#aaa",
+    fontSize: 12,
   },
 });
